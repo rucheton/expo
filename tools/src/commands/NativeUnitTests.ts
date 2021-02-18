@@ -32,8 +32,8 @@ async function thisAction({
   const runIos = platform === 'ios' || platform === 'both';
   if (runIos) {
     try {
-      await spawnAsync('fastlane scan', undefined, {
-        cwd: Directories.getIosDir(),
+      await spawnAsync('fastlane', ['test'], {
+        cwd: Directories.getExpoRepositoryRootDir(),
         stdio: 'inherit',
       });
     } catch (e) {

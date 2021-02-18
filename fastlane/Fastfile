@@ -98,7 +98,7 @@ platform :ios do
     scan(
       workspace: "ios/Exponent.xcworkspace",
       scheme: "Exponent",
-      devices: ["iPhone SE", "iPhone X"],
+      devices: ["iPhone 12"],
       clean: false,
     )
   end
