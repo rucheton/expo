@@ -23,11 +23,17 @@ target 'Exponent' do
       'expo-module-template',
       'expo-in-app-purchases',
       'expo-payments-stripe',
+      'expo-updates',
+      'expo-structured-headers',
     ],
     flags: {
       :inhibit_warnings => false
     }
   })
+
+  # Unimodules with additional test specs
+  pod 'EXStructuredHeaders', path: '../packages/expo-structured-headers/ios', :testspecs => ['Tests']
+  pod 'EXUpdates', path: '../packages/expo-updates/ios', :testspecs => ['Tests']
 
   # Expo modules that are not unimodules
   pod 'EXRandom', path: '../packages/expo-random/ios'
