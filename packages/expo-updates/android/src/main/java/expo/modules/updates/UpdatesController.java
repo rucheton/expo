@@ -99,6 +99,7 @@ public class UpdatesController {
    * @param context the base context of the application, ideally a {@link ReactApplication}
    */
   public static void initialize(Context context, Map<String, Object> configuration) {
+    configuration.put("isExpoGo", true);
     if (sInstance == null) {
       UpdatesConfiguration updatesConfiguration = new UpdatesConfiguration()
         .loadValuesFromMetadata(context)
