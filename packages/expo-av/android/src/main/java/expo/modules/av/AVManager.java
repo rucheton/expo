@@ -633,7 +633,7 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
     }
 
     mAudioRecorder = new MediaRecorder();
-    mAudioRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
+    mAudioRecorder.setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION);
 
     mAudioRecorder.setOutputFormat(androidOptions.getInt(RECORDING_OPTION_OUTPUT_FORMAT_KEY));
     mAudioRecorder.setAudioEncoder(androidOptions.getInt(RECORDING_OPTION_AUDIO_ENCODER_KEY));

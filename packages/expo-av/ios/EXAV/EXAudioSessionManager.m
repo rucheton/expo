@@ -169,7 +169,9 @@ UM_REGISTER_SINGLETON_MODULE(AudioSessionManager);
 
   BOOL shouldBeActive = [self _shouldBeActive];
   NSString *category = [self _getRequestedCategory];
-  AVAudioSessionCategoryOptions options = [self _getCategoryOptions];
+  BOOL isRecord = [category isEqualToString:@"AVAudioSessionCategoryPlayAndRecord"];
+  AVAudioSessionCategoryOptions options = isRecord ? [self _getCategoryOptions] | AVAudioSessionCategoryOptionAllowBluetooth
+ | AVAudioSessionCategoryOptionAllowBluetoothA2DP : [self _getCategoryOptions];
 
   // If the session ought to be deactivated let's deactivate it and then configure.
   // And if the session should be activated, let's configure it first!
