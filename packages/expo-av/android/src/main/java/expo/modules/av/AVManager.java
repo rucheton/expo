@@ -591,6 +591,7 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
     }
 
     if(broadcastReceiver != null) {
+      mAudioManager.stopBluetoothSco();
       mContext.unregisterReceiver(broadcastReceiver);
       broadcastReceiver = null;
     }
@@ -739,6 +740,7 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
         try {
           mAudioRecorder.pause();
           if(broadcastReceiver != null) {
+            mAudioManager.stopBluetoothSco();
             mContext.unregisterReceiver(broadcastReceiver);
             broadcastReceiver = null;
           }
@@ -762,6 +764,7 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
       try {
         mAudioRecorder.stop();
         if(broadcastReceiver != null) {
+          mAudioManager.stopBluetoothSco();
           mContext.unregisterReceiver(broadcastReceiver);
           broadcastReceiver = null;
         }
