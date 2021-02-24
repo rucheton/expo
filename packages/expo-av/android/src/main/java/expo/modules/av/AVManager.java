@@ -7,12 +7,15 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
+
+import com.google.android.exoplayer2.util.Log;
 
 import org.unimodules.core.ModuleRegistry;
 import org.unimodules.core.Promise;
@@ -92,6 +95,9 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
   private boolean mAudioRecorderIsPaused = false;
   private boolean mIsRegistered = false;
   private boolean mAudioRecorderIsMeteringEnabled = false;
+
+  private BroadcastReceiver broadcastReceiver;
+  private final IntentFilter scoFilter = new IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED);
 
   private ModuleRegistry mModuleRegistry;
 
@@ -584,6 +590,11 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
       mAudioRecorder = null;
     }
 
+    if(broadcastReceiver != null) {
+      mContext.unregisterReceiver(broadcastReceiver);
+      broadcastReceiver = null;
+    }
+
     mAudioRecordingFilePath = null;
     mAudioRecorderIsRecording = false;
     mAudioRecorderIsPaused = false;
@@ -633,7 +644,7 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
     }
 
     mAudioRecorder = new MediaRecorder();
-    mAudioRecorder.setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION);
+    mAudioRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
 
     mAudioRecorder.setOutputFormat(androidOptions.getInt(RECORDING_OPTION_OUTPUT_FORMAT_KEY));
     mAudioRecorder.setAudioEncoder(androidOptions.getInt(RECORDING_OPTION_AUDIO_ENCODER_KEY));
@@ -674,25 +685,48 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
       promise.reject("E_MISSING_PERMISSION", "Missing audio recording permissions.");
       return;
     }
-
     if (checkAudioRecorderExistsOrReject(promise)) {
-      try {
-        if (mAudioRecorderIsPaused && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-          mAudioRecorder.resume();
-        } else {
-          mAudioRecorder.start();
+      boolean hasBluetooth = Arrays.stream(mAudioManager.getDevices(AudioManager.GET_DEVICES_INPUTS)).filter(d -> d.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_SCO).count() > 0;
+
+      if (hasBluetooth) {
+        if(broadcastReceiver != null) {
+          mContext.unregisterReceiver(broadcastReceiver);
+          broadcastReceiver = null;
         }
-      } catch (final IllegalStateException e) {
-        promise.reject("E_AUDIO_RECORDING", "Start encountered an error: recording not started", e);
-        return;
+        broadcastReceiver = new BroadcastReceiver() {
+          @Override
+          public void onReceive(Context context, Intent intent) {
+            int state = intent.getIntExtra(AudioManager.EXTRA_SCO_AUDIO_STATE, -1);
+            if (AudioManager.SCO_AUDIO_STATE_CONNECTED == state) {
+              _startAudioRecording(promise);
+            }
+          }
+        };
+        mContext.registerReceiver(broadcastReceiver, scoFilter);
+        mAudioManager.startBluetoothSco();
+      } else {
+        _startAudioRecording(promise);
       }
-
-      mAudioRecorderUptimeOfLastStartResume = SystemClock.uptimeMillis();
-      mAudioRecorderIsRecording = true;
-      mAudioRecorderIsPaused = false;
-
-      promise.resolve(getAudioRecorderStatus());
     }
+  }
+
+  private void _startAudioRecording(final Promise promise) {
+    try {
+      if (mAudioRecorderIsPaused && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        mAudioRecorder.resume();
+      } else {
+        mAudioRecorder.start();
+      }
+    } catch (final IllegalStateException e) {
+      promise.reject("E_AUDIO_RECORDING", "Start encountered an error: recording not started", e);
+      return;
+    }
+
+    mAudioRecorderUptimeOfLastStartResume = SystemClock.uptimeMillis();
+    mAudioRecorderIsRecording = true;
+    mAudioRecorderIsPaused = false;
+
+    promise.resolve(getAudioRecorderStatus());
   }
 
   @Override
@@ -704,6 +738,10 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
       } else {
         try {
           mAudioRecorder.pause();
+          if(broadcastReceiver != null) {
+            mContext.unregisterReceiver(broadcastReceiver);
+            broadcastReceiver = null;
+          }
         } catch (final IllegalStateException e) {
           promise.reject("E_AUDIO_RECORDINGPAUSE", "Pause encountered an error: recording not paused", e);
           return;
@@ -723,6 +761,10 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
     if (checkAudioRecorderExistsOrReject(promise)) {
       try {
         mAudioRecorder.stop();
+        if(broadcastReceiver != null) {
+          mContext.unregisterReceiver(broadcastReceiver);
+          broadcastReceiver = null;
+        }
       } catch (final RuntimeException e) {
         mAudioRecorderIsPaused = false;
         if (!mAudioRecorderIsRecording) {
